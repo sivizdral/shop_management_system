@@ -6,6 +6,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, cr
 from sqlalchemy import and_
 import re
 from functools import wraps
+import json
 
 application = Flask(__name__)
 application.config.from_object(Configuration)
@@ -39,39 +40,33 @@ def register():
         message = "Field isCustomer is missing."
 
     if message != "":
-        return Response(message, status = 400)
+        return Response(json.dumps({"message":message}), status = 400)
 
-    validEmail = parseaddr(email)
-    if len(validEmail[1]) == 0:
-        return Response("Invalid email.", status = 400)
+    validEmail = re.match(r'[^@]+@[^@]+\.[^@]{2,}', email)
+    if not validEmail:
+        return Response(json.dumps({"message":"Invalid email."}), status = 400)
 
     invalidPass = False
-    if len(password) < 8:
-        invalidPass = True
-    elif re.search(r'[a-z]', password) == False:
-        invalidPass = True
-    elif re.search(r'[A-Z]', password) == False:
-        invalidPass = True
-    elif re.search(r'\d', password) == False:
+    if len(password) < 8 or not re.search(r'[A-Z]', password) or not re.search(r'[a-z]', password) or not re.search(r'\d', password):
         invalidPass = True
     
     if invalidPass:
-        return Response("Invalid password.", status = 400)
+        return Response(json.dumps({"message":"Invalid password."}), status = 400)
 
     userExists = User.query.filter(User.email == email).first()
     if userExists:
-        return Response("Email already exists.", status = 400)
+        return Response(json.dumps({"message":"Email already exists."}), status = 400)
     else:
         newUser = User(forename=forename, surname=surname, password=password, email=email)
         db.session.add(newUser)
         db.session.commit()
 
         if isCustomer == False:
-            newUserRole = UserRole(userId=newUser.id, roleId=3)
+            newUserRole = UserRole(userId=newUser.id, roleId=2)
             db.session.add(newUserRole)
             db.session.commit()
         else:
-            newUserRole = UserRole(userId=newUser.id, roleId=2)
+            newUserRole = UserRole(userId=newUser.id, roleId=3)
             db.session.add(newUserRole)
             db.session.commit()
 
@@ -94,15 +89,15 @@ def login():
         message = "Field password is missing."
 
     if message != "":
-        return Response(message, status = 400)
+        return Response(json.dumps({"message":message}), status = 400)
 
-    validEmail = parseaddr(email)
-    if len(validEmail[1]) == 0:
-        return Response("Invalid email.", status = 400)
+    validEmail = re.match(r'[^@]+@[^@]+\.[^@]{2,}', email)
+    if not validEmail:
+        return Response(json.dumps({"message": "Invalid email."}), status=400)
 
     user = User.query.filter(User.email == email).first()
     if not user or user.password != password:
-        return Response("Invalid credentials.", status = 400)
+        return Response(json.dumps({"message":"Invalid credentials."}), status = 400)
 
     additionalClaims = {
         "forename": user.forename,
@@ -144,8 +139,9 @@ def refresh():
         "surname": refreshClaims["surname"],
         "roles": refreshClaims["roles"]
     }
+    accessToken = create_access_token(identity=identity, additional_claims=additionalClaims)
 
-    return Response(create_access_token(identity=identity, additional_claims=additionalClaims), status = 200)
+    return jsonify(accessToken=accessToken), 200
 
 @application.route("/delete", methods = ["POST"])
 @isAdmin(role='admin')
@@ -155,15 +151,15 @@ def delete():
     emailEmpty = len(email) == 0
 
     if (emailEmpty):
-        return Response("Field email is missing.", status = 400)
+        return Response(json.dumps({"message":"Field email is missing."}), status = 400)
 
-    validEmail = parseaddr(email)
-    if len(validEmail[1]) == 0:
-        return Response("Invalid email.", status = 400)
+    validEmail = re.match(r'[^@]+@[^@]+\.[^@]{2,}', email)
+    if not validEmail:
+        return Response(json.dumps({"message": "Invalid email."}), status=400)
 
     user = User.query.filter(User.email == email).first()
     if not user:
-        return Response("Unknown user.", status = 400)
+        return Response(json.dumps({"message":"Unknown user."}), status = 400)
     else:
         db.session.delete(user)
         db.session.commit()
