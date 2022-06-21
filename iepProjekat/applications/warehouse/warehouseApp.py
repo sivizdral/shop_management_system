@@ -23,6 +23,8 @@ def updateProducts():
     csv_reader = csv.reader(csv_file, delimiter=',')
     line_count = 0
 
+    messages = []
+
     redis = Redis(host=Configuration.REDIS_HOST)
 
     for row in csv_reader:
@@ -46,7 +48,10 @@ def updateProducts():
 
         line_count += 1
         sendMessage = ','.join(row)
-        redis.publish(channel="warehouseUpdates", message=sendMessage)
+        messages.append(sendMessage)
+
+    for message in messages:
+        redis.publish(channel="warehouseUpdates", message=message)
 
     return Response(status=200)
 
