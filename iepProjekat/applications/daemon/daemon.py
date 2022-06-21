@@ -1,7 +1,7 @@
 import threading
 import redis
-from applications.configuration import Configuration
-from applications.models import *
+from configuration import Configuration
+from models import *
 
 class Daemon(threading.Thread):
     def __init__(self):
@@ -14,6 +14,8 @@ class Daemon(threading.Thread):
         while (True):
             for msg in self.pubsub.listen():
                 msg = msg['data']
+                if not type(msg) == str:
+                    continue
                 row = msg.split(',')
                 categories = row[0].split('|')
                 name = row[1]

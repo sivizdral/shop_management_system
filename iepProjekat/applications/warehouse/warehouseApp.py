@@ -1,10 +1,12 @@
 from flask import Flask, request, Response, jsonify
-from applications.configuration import Configuration
-from applications.models import *
+from werkzeug.utils import secure_filename
+
+from configuration import Configuration
+from models import *
 from redis import Redis
 from warehousemanDecorator import isWarehouseman
 from flask_jwt_extended import JWTManager
-import json, csv
+import json, csv, io
 
 application = Flask(__name__)
 application.config.from_object(Configuration)
@@ -14,13 +16,14 @@ jwt = JWTManager(application)
 @application.route("/update", methods=["POST"])
 @isWarehouseman(role="warehouseman")
 def updateProducts():
-    fileName = request.json.get("file", "")
+    file = request.files['file']
 
-    if len(fileName) == 0:
-        return Response(json.dumps({"message":"Field file missing."}), status=400)
+    if not file:
+        return Response(json.dumps({"message": "Field file is missing."}), status=400)
 
-    csv_file = open(fileName)
-    csv_reader = csv.reader(csv_file, delimiter=',')
+    file = file.stream.read().decode("utf-8")
+    stream = io.StringIO(file)
+    csv_reader = csv.reader(stream, delimiter=',')
     line_count = 0
 
     messages = []
@@ -58,4 +61,4 @@ def updateProducts():
 
 if __name__ == "__main__":
     db.init_app(application)
-    application.run(debug=True, port=5001)
+    application.run(debug=True, host="0.0.0.0", port=5001)

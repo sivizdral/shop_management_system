@@ -1,6 +1,6 @@
 from flask import Flask, request, Response, jsonify
-from applications.configuration import Configuration
-from applications.models import *
+from configuration import Configuration
+from models import *
 from customerDecorator import isCustomer
 from flask_jwt_extended import JWTManager
 import json
@@ -149,4 +149,4 @@ def searchProducts():
 
 if __name__ == "__main__":
     db.init_app(application)
-    application.run(debug=True, port=5003)
+    application.run(debug=True, host="0.0.0.0", port=5003)
