@@ -2,7 +2,7 @@ from flask import Flask, request, Response, jsonify
 from configuration import Configuration
 from models import *
 from customerDecorator import isCustomer
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt
 import json
 
 application = Flask(__name__)
@@ -157,39 +157,122 @@ def orderProducts():
 
     req_number = 0
     for req in requests:
-        if not req["id"]:
+        id = req.get("id", "")
+        quantity = req.get("quantity", "")
+
+        if id == "":
             msg = "Product id is missing for request number " + str(req_number) + "."
-            return Response(json.dumps({"message": msg}))
-        if not req["quantity"]:
+            return Response(json.dumps({"message": msg}), status=400)
+        if quantity == "":
             msg = "Product quantity is missing for request number " + str(req_number) + "."
-            return Response(json.dumps({"message": msg}))
+            return Response(json.dumps({"message": msg}), status=400)
 
-        id = req["id"]
-        quantity = req["quantity"]
-
-        if not id.isdigit() or int(id) <= 0:
+        if (type(id) == str and not id.isdigit()) or int(id) <= 0:
             msg = "Invalid product id for request number " + str(req_number) + "."
-            return Response(json.dumps({"message": msg}))
+            return Response(json.dumps({"message": msg}), status=400)
 
-        if not quantity.isdigit() or int(quantity) <= 0:
+        if (type(quantity) == str and not quantity.isdigit()) or int(quantity) <= 0:
             msg = "Invalid product quantity for request number " + str(req_number) + "."
-            return Response(json.dumps({"message": msg}))
+            return Response(json.dumps({"message": msg}), status=400)
 
         product = Product.query.filter(Product.id == int(id)).first()
 
         if not product:
             msg = "Invalid product for request number " + str(req_number) + "."
-            return Response(json.dumps({"message": msg}))
+            return Response(json.dumps({"message": msg}), status=400)
 
         req_number += 1
 
-    order = Order(price=0, status="W")
+    verify_jwt_in_request()
+    claims = get_jwt()
+    email = claims['email']
+    order = Order(price=0, status="W", email=email)
+    db.session.add(order)
+    db.session.commit()
+    fulfilled = True
+
     for req in requests:
-        id = req["id"]
-        quantity = req["quantity"]
+        id = int(req["id"])
+        quantity = int(req["quantity"])
+
+        product = Product.query.filter(Product.id == id).first()
+        price = product.price * quantity
+        available = product.availableQuantity
+        delivered = 0
+
+        if available >= quantity:
+            product.availableQuantity -= quantity
+            delivered = quantity
+            db.session.commit()
+        else:
+            product.availableQuantity = 0
+            delivered = available
+            db.session.commit()
+
+        if delivered != quantity:
+            fulfilled = False
+
+        orderedProduct = OrderedProducts(OrderId=order.id, ProductId=product.id, requestedItems=quantity, receivedItems=delivered)
+        db.session.add(orderedProduct)
+        db.session.commit()
+
+        order.price += price
+        db.session.commit()
+
+    if fulfilled:
+        order.status = "F"
+        db.session.commit()
+
+    return Response(json.dumps({"id": order.id}), status=200)
 
 
+@application.route("/status", methods=["GET"])
+@isCustomer(role="customer")
+def checkOrders():
 
+    verify_jwt_in_request()
+    claims = get_jwt()
+    email = claims['email']
+    orders = []
+
+    myOrders = Order.query.filter(Order.email == email).all()
+
+    for myOrder in myOrders:
+        products = OrderedProducts.query.filter(OrderedProducts.OrderId == myOrder.id).all()
+        p_list = []
+
+        for product in products:
+            prod = Product.query.filter(Product.id == product.ProductId).first()
+            pcs = []
+            procats = ProductCategory.query.filter(ProductCategory.ProductId == prod.id).all()
+
+            for procat in procats:
+                cat = Category.query.filter(Category.id == procat.CategoryId).first()
+                pcs.append(cat.name)
+
+            object = {
+                "categories": pcs,
+                "name": prod.name,
+                "price": prod.price,
+                "received": product.receivedItems,
+                "requested": product.requestedItems
+            }
+            p_list.append(object)
+
+        status = 'PENDING'
+        if myOrder.status == "F":
+            status = "COMPLETE"
+
+        object = {
+            "products": p_list,
+            "price": myOrder.price,
+            "status": status,
+            "timestamp": str(myOrder.creationTime)
+        }
+
+        orders.append(object)
+
+    return Response(json.dumps({"orders":orders}), status=200)
 
 
 

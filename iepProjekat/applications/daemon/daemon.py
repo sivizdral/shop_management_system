@@ -65,3 +65,34 @@ with application.app_context() as context:
                 product.availableQuantity += quantity
                 db.session.commit()
 
+            orders = Order.query.filter(Order.status == "W").join(OrderedProducts).join(Product).filter(Product.name == product.name).group_by(Order.id).order_by(Order.creationTime).all()
+
+            for order in orders:
+                orderedProds = OrderedProducts.query.filter(OrderedProducts.OrderId == order.id)
+
+                for ord_prod in orderedProds:
+                    if ord_prod.ProductId != product.id or ord_prod.requestedItems == ord_prod.receivedItems or product.availableQuantity == 0:
+                        continue
+
+                    if product.availableQuantity > ord_prod.requestedItems - ord_prod.receivedItems:
+                        product.availableQuantity -= (ord_prod.requestedItems - ord_prod.receivedItems)
+                        ord_prod.receivedItems = ord_prod.requestedItems
+                        db.session.commit()
+                    else:
+                        ord_prod.receivedItems += product.availableQuantity
+                        product.availableQuantity = 0
+                        db.session.commit()
+
+                leftRequests = OrderedProducts.query.filter(OrderedProducts.OrderId == order.id)
+
+                found = False
+                for req in leftRequests:
+                    if req.requestedItems != req.receivedItems:
+                        found = True
+                        break
+
+                if not found:
+                    order.status = "F"
+                    db.session.commit()
+
+

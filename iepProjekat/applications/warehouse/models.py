@@ -50,5 +50,6 @@ class Order(db.Model):
     price = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(1), nullable=False)
     creationTime = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now())
+    email = db.Column(db.String(256), nullable=False)
 
     products = db.relationship("Product", secondary=OrderedProducts.__table__, back_populates="orders")

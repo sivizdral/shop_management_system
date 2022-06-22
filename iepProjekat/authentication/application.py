@@ -102,6 +102,7 @@ def login():
     additionalClaims = {
         "forename": user.forename,
         "surname": user.surname,
+        "email": user.email,
         "roles": [str(role) for role in user.roles]
     }
 
@@ -137,6 +138,7 @@ def refresh():
     additionalClaims = {
         "forename": refreshClaims["forename"],
         "surname": refreshClaims["surname"],
+        "email": refreshClaims["email"],
         "roles": refreshClaims["roles"]
     }
     accessToken = create_access_token(identity=identity, additional_claims=additionalClaims)
