@@ -16,7 +16,7 @@ jwt = JWTManager(application)
 @application.route("/update", methods=["POST"])
 @isWarehouseman(role="warehouseman")
 def updateProducts():
-    file = request.files['file']
+    file = request.files.get('file', None)
 
     if not file:
         return Response(json.dumps({"message": "Field file is missing."}), status=400)
@@ -45,7 +45,7 @@ def updateProducts():
             msg = "Incorrect price on line " + str(line_count) + "."
             return Response(json.dumps({"message":msg}), status=400)
 
-        if price == 0:
+        if price <= 0:
             msg = "Incorrect price on line " + str(line_count) + "."
             return Response(json.dumps({"message": msg}), status=400)
 

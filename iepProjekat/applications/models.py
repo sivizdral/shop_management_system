@@ -1,3 +1,5 @@
+import datetime
+
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -27,7 +29,7 @@ class Product(db.Model):
     availableQuantity = db.Column(db.Integer, nullable=False)
 
     categories = db.relationship("Category", secondary=ProductCategory.__table__, back_populates="products")
-    orders = db.relationship("Order", secondary=OrderedProducts.__table__, back_populates="orders")
+    orders = db.relationship("Order", secondary=OrderedProducts.__table__, back_populates="products")
 
 
 class Category(db.Model):
@@ -45,6 +47,6 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     price = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(1), nullable=False)
-    creationTime = db.Column(db.DateTime, nullable=False)
+    creationTime = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now())
 
-    products = db.relationship("Product", secondary=OrderedProducts.__table__, back_populates="products")
+    products = db.relationship("Product", secondary=OrderedProducts.__table__, back_populates="orders")

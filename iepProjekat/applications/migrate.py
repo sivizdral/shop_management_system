@@ -1,3 +1,5 @@
+import shutil
+
 from flask import Flask
 from configuration import Configuration
 from flask_migrate import Migrate, init, migrate, upgrade
@@ -14,8 +16,13 @@ if not database_exists(application.config["SQLALCHEMY_DATABASE_URI"]):
 db.init_app(application)
 
 with application.app_context() as context:
+    try:
+        shutil.rmtree("migrations")
+    except:
+        print("EXCEPTION")
     init()
     migrate(message="Production migration.")
     upgrade()
+
 
 
