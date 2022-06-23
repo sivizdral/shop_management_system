@@ -52,3 +52,12 @@ services:
       - databaseMigration
     ports:
       - 5001:5001
+  admin:
+    image: admin
+    environment:
+      - DATABASE_URL=database
+      - REDIS_PORT=redis
+    depends_on:
+      - databaseMigration
+    ports:
+      - 5004:5004
