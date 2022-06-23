@@ -205,14 +205,14 @@ def orderProducts():
             delivered = quantity
             db.session.commit()
         else:
-            product.availableQuantity = 0
             delivered = available
+            product.availableQuantity = 0
             db.session.commit()
 
         if delivered != quantity:
             fulfilled = False
 
-        orderedProduct = OrderedProducts(OrderId=order.id, ProductId=product.id, requestedItems=quantity, receivedItems=delivered)
+        orderedProduct = OrderedProducts(OrderId=order.id, ProductId=product.id, startingPrice=product.price, requestedItems=quantity, receivedItems=delivered)
         db.session.add(orderedProduct)
         db.session.commit()
 
@@ -253,7 +253,7 @@ def checkOrders():
             object = {
                 "categories": pcs,
                 "name": prod.name,
-                "price": prod.price,
+                "price": product.startingPrice,
                 "received": product.receivedItems,
                 "requested": product.requestedItems
             }

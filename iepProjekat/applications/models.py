@@ -20,6 +20,7 @@ class OrderedProducts(db.Model):
     ProductId = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
     requestedItems = db.Column(db.Integer, nullable=False)
     receivedItems = db.Column(db.Integer, nullable=False)
+    startingPrice = db.Column(db.Float, nullable=False)
 
 
 class Product(db.Model):
