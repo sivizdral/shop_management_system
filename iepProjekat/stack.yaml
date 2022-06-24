@@ -28,9 +28,6 @@ services:
     image: authdbmigration
     environment:
       - DATABASE_URL=authenticationDatabase
-    depends_on:
-      authenticationDatabase:
-        condition: service_healthy
     networks:
       - authenticationNetwork
 
@@ -38,8 +35,6 @@ services:
     image: myauthenticationimage
     environment:
       - DATABASE_URL=authenticationDatabase
-    depends_on:
-      - authenticationDBMigration
     ports:
       - 5002:5002
     networks:
@@ -68,9 +63,6 @@ services:
     environment:
       - DATABASE_URL=database
       - REDIS_PORT=redis
-    depends_on:
-      database:
-        condition: service_healthy
     networks:
       - customerNetwork
       - daemonNetwork
@@ -89,20 +81,18 @@ services:
     environment:
       - DATABASE_URL=database
       - REDIS_PORT=redis
-    depends_on:
-      - databaseMigration
     ports:
       - 5003:5003
     networks:
       - customerNetwork
+    deploy:
+      replicas: 3
 
   daemon:
     image: daemon
     environment:
       - DATABASE_URL=database
       - REDIS_PORT=redis
-    depends_on:
-      - databaseMigration
     networks:
       - daemonNetwork
       - redisDaemonNetwork
@@ -112,21 +102,19 @@ services:
     environment:
       - DATABASE_URL=database
       - REDIS_PORT=redis
-    depends_on:
-      - databaseMigration
     ports:
       - 5001:5001
     networks:
       - warehouseNetwork
       - redisWarehouseNetwork
+    deploy:
+      replicas: 3
 
   admin:
     image: admin
     environment:
       - DATABASE_URL=database
       - REDIS_PORT=redis
-    depends_on:
-      - databaseMigration
     ports:
       - 5004:5004
     networks:
@@ -134,22 +122,31 @@ services:
 
 networks:
   customerNetwork:
+    driver: overlay
 
   warehouseNetwork:
+    driver: overlay
 
   adminNetwork:
+    driver: overlay
 
   daemonNetwork:
+    driver: overlay
 
   authenticationNetwork:
+    driver: overlay
 
   redisDaemonNetwork:
+    driver: overlay
 
   redisWarehouseNetwork:
+    driver: overlay
 
   adminerAuthenticationNetwork:
+    driver: overlay
 
   adminerStoreNetwork:
+    driver: overlay
 
 volumes:
 
